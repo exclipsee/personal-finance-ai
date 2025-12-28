@@ -210,41 +210,115 @@ elif page == "📈 Analysis":
             filtered_expenses = filtered_df[filtered_df['amount'] < 0].copy()
             filtered_expenses['amount'] = filtered_expenses['amount'].abs()
             
-            # Charts
+            # Charts — selectable, fancier options
             col1, col2 = st.columns(2)
-            
+
+            # --- Left: Spending by Category with chart selector ---
             with col1:
                 st.subheader("Spending by Category")
-                if not filtered_expenses.empty and 'category' in filtered_expenses.columns:
-                    category_sum = filtered_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
-                    fig = px.pie(
-                        values=category_sum.values,
-                        names=category_sum.index,
-                        title="Expenses by Category"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
+
+                if filtered_expenses.empty or 'category' not in filtered_expenses.columns:
                     st.info("No category data available")
-            
+                else:
+                    top_n = st.selectbox("Top categories to show", options=[5, 10, 20, 50], index=1)
+                    cat_choice = st.selectbox("Chart type", options=["Pie", "Donut", "Bar", "Treemap", "Sunburst"], index=1)
+
+                    category_sum = filtered_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
+                    category_sum = category_sum.head(top_n)
+
+                    if cat_choice == "Pie":
+                        fig = px.pie(values=category_sum.values, names=category_sum.index, title="Expenses by Category")
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    elif cat_choice == "Donut":
+                        fig = px.pie(values=category_sum.values, names=category_sum.index, title="Expenses by Category (Donut)", hole=0.4)
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    elif cat_choice == "Bar":
+                        fig = px.bar(x=category_sum.index, y=category_sum.values, title="Expenses by Category", labels={'x': 'Category', 'y': 'Amount ($)'})
+                        fig.update_layout(xaxis={'categoryorder':'total descending'})
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    elif cat_choice == "Treemap":
+                        fig = px.treemap(names=category_sum.index, values=category_sum.values, title="Expenses Treemap")
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    elif cat_choice == "Sunburst":
+                        # Simple one-level sunburst (can be extended to hierarchical categories)
+                        fig = px.sunburst(names=category_sum.index, values=category_sum.values, title="Expenses Sunburst")
+                        st.plotly_chart(fig, use_container_width=True)
+
+            # --- Right: Spending Over Time with frequency and chart selector ---
             with col2:
                 st.subheader("Spending Over Time")
-                if not filtered_expenses.empty:
-                    # Filter out NaT dates before grouping
-                    valid_expenses = filtered_expenses[filtered_expenses['date'].notna()]
-                    if not valid_expenses.empty:
-                        daily_spending = valid_expenses.groupby(valid_expenses['date'].dt.date)['amount'].sum()
-                        # Format dates for display
-                        formatted_dates = [d.strftime('%d/%m/%Y') for d in daily_spending.index]
-                        fig = px.line(
-                            x=formatted_dates,
-                            y=daily_spending.values,
-                            title="Daily Spending",
-                            labels={'x': 'Date', 'y': 'Amount ($)'}
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
+
+                if filtered_expenses.empty:
+                    st.info("No spending data in selected date range")
+                else:
+                    # Prepare valid dated expenses
+                    valid_expenses = filtered_expenses[filtered_expenses['date'].notna()].copy()
+                    if valid_expenses.empty:
                         st.info("No valid dates in filtered data")
-            
+                    else:
+                        freq = st.selectbox("Frequency", options=["Daily", "Weekly", "Monthly"], index=0)
+                        time_chart = st.selectbox("Chart type", options=["Line", "Area", "Bar", "Rolling Average", "Heatmap (month vs weekday)"], index=0)
+
+                        # Resample rule map
+                        rule_map = {"Daily": 'D', "Weekly": 'W', "Monthly": 'M'}
+                        rule = rule_map.get(freq, 'D')
+
+                        # Ensure datetime index for resampling
+                        valid_expenses['date'] = pd.to_datetime(valid_expenses['date'])
+                        ts = valid_expenses.set_index('date').resample(rule)['amount'].sum().abs()
+
+                        if ts.empty:
+                            st.info("No time-series data after resampling")
+                        else:
+                            if time_chart in ("Line", "Area"):
+                                title = f"{freq} Spending"
+                                if time_chart == "Line":
+                                    fig = px.line(x=ts.index, y=ts.values, title=title, labels={'x':'Date','y':'Amount ($)'})
+                                else:
+                                    fig = px.area(x=ts.index, y=ts.values, title=title, labels={'x':'Date','y':'Amount ($)'})
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            elif time_chart == "Bar":
+                                fig = px.bar(x=ts.index, y=ts.values, title=f"{freq} Spending (Bar)", labels={'x':'Date','y':'Amount ($)'})
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            elif time_chart == "Rolling Average":
+                                # Rolling window depends on frequency
+                                window_map = {'D':7, 'W':4, 'M':3}
+                                w = window_map.get(rule, 7)
+                                rolling = ts.rolling(window=w, min_periods=1).mean()
+                                fig = go.Figure()
+                                fig.add_trace(go.Bar(x=ts.index, y=ts.values, name='Amount', marker_color='lightgray'))
+                                fig.add_trace(go.Line(x=rolling.index, y=rolling.values, name=f'Rolling Avg ({w})', line=dict(color='crimson', width=3)))
+                                fig.update_layout(title=f"{freq} Spending with Rolling Average")
+                                st.plotly_chart(fig, use_container_width=True)
+
+                            else:
+                                # Heatmap: month vs weekday
+                                ve = valid_expenses.copy()
+                                ve['month'] = ve['date'].dt.strftime('%Y-%m')
+                                ve['weekday'] = ve['date'].dt.day_name()
+                                pivot = ve.groupby(['month','weekday'])['amount'].sum().abs().reset_index()
+                                # Ensure weekdays order
+                                weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+                                pivot['weekday'] = pd.Categorical(pivot['weekday'], categories=weekdays, ordered=True)
+                                heat = pivot.pivot(index='weekday', columns='month', values='amount').fillna(0)
+                                if heat.empty:
+                                    st.info("Not enough data to build heatmap")
+                                else:
+                                    fig = go.Figure(data=go.Heatmap(
+                                        z=heat.values,
+                                        x=list(heat.columns),
+                                        y=list(heat.index),
+                                        colorscale='YlOrRd'
+                                    ))
+                                    fig.update_layout(title='Spending Heatmap (month vs weekday)', xaxis_title='Month', yaxis_title='Weekday')
+                                    st.plotly_chart(fig, use_container_width=True)
+
             # Category breakdown table
             st.subheader("Category Breakdown")
             if not filtered_expenses.empty and 'category' in filtered_expenses.columns:
