@@ -33,7 +33,7 @@ An intelligent personal finance assistant that analyzes your spending, predicts 
 ## 📊 Data Format
 
 Your transaction CSV should have columns:
-- `date` - Transaction date (YYYY-MM-DD)
+- `date` - Transaction date (DD/MM/YYYY)
 - `description` - Transaction description
 - `amount` - Amount (negative for expenses, positive for income)
 - `category` - Category (optional, will be auto-categorized if missing)
@@ -41,9 +41,9 @@ Your transaction CSV should have columns:
 Example:
 ```csv
 date,description,amount,category
-2024-01-15,Grocery Store,-45.50,Food
-2024-01-16,Salary,3000.00,Income
-2024-01-17,Restaurant,-28.00,Food
+15/01/2024,Grocery Store,-45.50,Food
+16/01/2024,Salary,3000.00,Income
+17/01/2024,Restaurant,-28.00,Food
 ```
 
 ## 🧩 Tech Stack

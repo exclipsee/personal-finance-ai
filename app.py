@@ -85,8 +85,11 @@ if page == "🏠 Dashboard":
         
         # Recent transactions
         st.subheader("Recent Transactions")
+        display_df = df.sort_values('date', ascending=False, na_position='last').head(10).copy()
+        # Only format valid dates, leave NaT as is (will show as NaT in display)
+        display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
         st.dataframe(
-            df.sort_values('date', ascending=False).head(10),
+            display_df,
             use_container_width=True
         )
 
@@ -99,7 +102,7 @@ elif page == "📥 Import Data":
         st.markdown("### Upload CSV File")
         st.markdown("""
         Your CSV should have these columns:
-        - `date` - Transaction date (YYYY-MM-DD)
+        - `date` - Transaction date (DD/MM/YYYY)
         - `description` - Transaction description
         - `amount` - Amount (negative for expenses, positive for income)
         - `category` - Category (optional)
@@ -116,8 +119,19 @@ elif page == "📥 Import Data":
                 if not all(col in df.columns for col in required_cols):
                     st.error(f"Missing required columns. Need: {', '.join(required_cols)}")
                 else:
-                    # Convert date column
-                    df['date'] = pd.to_datetime(df['date'])
+                    # Convert date column - try European format first (DD/MM/YYYY), then fallback to auto-detect
+                    try:
+                        df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
+                        # If parsing failed, try other common formats
+                        if df['date'].isna().any():
+                            df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+                    except:
+                        df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+                    
+                    # Check for invalid dates and warn user
+                    invalid_dates = df['date'].isna().sum()
+                    if invalid_dates > 0:
+                        st.warning(f"⚠️ {invalid_dates} row(s) have invalid dates and will be excluded from date-based analysis.")
                     
                     # Ensure amount is numeric
                     df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
@@ -129,7 +143,10 @@ elif page == "📥 Import Data":
                     st.session_state.transactions = df
                     st.session_state.data_loaded = True
                     st.success(f"✅ Loaded {len(df)} transactions!")
-                    st.dataframe(df.head(), use_container_width=True)
+                    display_df = df.head().copy()
+                    # Only format valid dates
+                    display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
+                    st.dataframe(display_df, use_container_width=True)
                     
             except Exception as e:
                 st.error(f"Error loading file: {str(e)}")
@@ -167,58 +184,76 @@ elif page == "📈 Analysis":
     if st.session_state.transactions.empty:
         st.warning("No data loaded. Please import transactions first.")
     else:
-        df = st.session_state.transactions
-        expenses = df[df['amount'] < 0].copy()
-        expenses['amount'] = expenses['amount'].abs()
+        df = st.session_state.transactions.copy()
+        # Filter out NaT (Not a Time) values for date operations
+        valid_dates = df['date'].dropna()
         
-        # Time period selector
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input("Start Date", value=df['date'].min().date())
-        with col2:
-            end_date = st.date_input("End Date", value=df['date'].max().date())
-        
-        filtered_df = df[(df['date'].dt.date >= start_date) & (df['date'].dt.date <= end_date)]
-        filtered_expenses = filtered_df[filtered_df['amount'] < 0].copy()
-        filtered_expenses['amount'] = filtered_expenses['amount'].abs()
-        
-        # Charts
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Spending by Category")
+        if valid_dates.empty:
+            st.error("No valid dates found in the data. Please check your date format.")
+        else:
+            expenses = df[df['amount'] < 0].copy()
+            expenses['amount'] = expenses['amount'].abs()
+            
+            # Time period selector - use valid dates only
+            min_date = valid_dates.min().date() if not valid_dates.empty else datetime.now().date()
+            max_date = valid_dates.max().date() if not valid_dates.empty else datetime.now().date()
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("Start Date", value=min_date)
+            with col2:
+                end_date = st.date_input("End Date", value=max_date)
+            
+            # Filter by date range, excluding NaT values
+            date_mask = df['date'].notna() & (df['date'].dt.date >= start_date) & (df['date'].dt.date <= end_date)
+            filtered_df = df[date_mask]
+            filtered_expenses = filtered_df[filtered_df['amount'] < 0].copy()
+            filtered_expenses['amount'] = filtered_expenses['amount'].abs()
+            
+            # Charts
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Spending by Category")
+                if not filtered_expenses.empty and 'category' in filtered_expenses.columns:
+                    category_sum = filtered_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
+                    fig = px.pie(
+                        values=category_sum.values,
+                        names=category_sum.index,
+                        title="Expenses by Category"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No category data available")
+            
+            with col2:
+                st.subheader("Spending Over Time")
+                if not filtered_expenses.empty:
+                    # Filter out NaT dates before grouping
+                    valid_expenses = filtered_expenses[filtered_expenses['date'].notna()]
+                    if not valid_expenses.empty:
+                        daily_spending = valid_expenses.groupby(valid_expenses['date'].dt.date)['amount'].sum()
+                        # Format dates for display
+                        formatted_dates = [d.strftime('%d/%m/%Y') for d in daily_spending.index]
+                        fig = px.line(
+                            x=formatted_dates,
+                            y=daily_spending.values,
+                            title="Daily Spending",
+                            labels={'x': 'Date', 'y': 'Amount ($)'}
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("No valid dates in filtered data")
+            
+            # Category breakdown table
+            st.subheader("Category Breakdown")
             if not filtered_expenses.empty and 'category' in filtered_expenses.columns:
-                category_sum = filtered_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
-                fig = px.pie(
-                    values=category_sum.values,
-                    names=category_sum.index,
-                    title="Expenses by Category"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No category data available")
-        
-        with col2:
-            st.subheader("Spending Over Time")
-            if not filtered_expenses.empty:
-                daily_spending = filtered_expenses.groupby(filtered_expenses['date'].dt.date)['amount'].sum()
-                fig = px.line(
-                    x=daily_spending.index,
-                    y=daily_spending.values,
-                    title="Daily Spending",
-                    labels={'x': 'Date', 'y': 'Amount ($)'}
-                )
-                st.plotly_chart(fig, use_container_width=True)
-        
-        # Category breakdown table
-        st.subheader("Category Breakdown")
-        if not filtered_expenses.empty and 'category' in filtered_expenses.columns:
-            category_stats = filtered_expenses.groupby('category').agg({
-                'amount': ['sum', 'mean', 'count']
-            }).round(2)
-            category_stats.columns = ['Total', 'Average', 'Count']
-            category_stats = category_stats.sort_values('Total', ascending=False)
-            st.dataframe(category_stats, use_container_width=True)
+                category_stats = filtered_expenses.groupby('category').agg({
+                    'amount': ['sum', 'mean', 'count']
+                }).round(2)
+                category_stats.columns = ['Total', 'Average', 'Count']
+                category_stats = category_stats.sort_values('Total', ascending=False)
+                st.dataframe(category_stats, use_container_width=True)
 
 elif page == "🤖 AI Insights":
     st.header("AI-Powered Insights")
