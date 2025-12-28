@@ -70,7 +70,7 @@ date,description,amount,category
 
 ## 🤝 Contributing
 
-This is a portfolio project, but contributions and suggestions are welcome!
+This is a personal hobby project that I use to help manage my own finances. It reflects how I track and analyze spending for my personal use and is not financial advice. Contributions and suggestions are welcome, but please be mindful that this repository contains examples and utilities tailored to my personal workflows.
 
 ## 📜 License
 
