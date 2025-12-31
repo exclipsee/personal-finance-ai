@@ -14,21 +14,74 @@ An intelligent personal finance assistant that analyzes your spending, predicts 
 - **Interactive Dashboard**: Beautiful, intuitive interface built with Streamlit
 
 ## 🚀 Quick Start
+1. Create and activate a Python virtual environment (recommended):
 
-1. **Install dependencies:**
+   - macOS / Linux:
+     ```bash
+     python -m venv .venv
+     source .venv/bin/activate
+     ```
+
+   - Windows (PowerShell):
+     ```powershell
+     python -m venv .venv
+     .\\.venv\\Scripts\\Activate.ps1
+     ```
+
+2. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Run the app:**
+3. Run the Streamlit app (default port 8501):
+
    ```bash
    streamlit run app.py
    ```
 
-3. **Start tracking:**
-   - Import your transaction data (CSV format)
-   - Or manually add transactions
-   - Explore insights and predictions
+4. Start tracking:
+
+   - Use the app UI to import a transaction CSV (see "Sample CSV" below).
+   - Or add transactions manually via the dashboard.
+   - Explore spending visualizations, budgets, and predictions.
+
+## Usage Examples
+
+- Run only the web UI on a different port:
+
+  ```bash
+  streamlit run app.py --server.port 8502
+  ```
+
+- Quick inspect of a CSV from the command line (preview first 5 rows):
+
+  ```bash
+  python -c "import pandas as pd; print(pd.read_csv('data/sample_transactions.csv').head())"
+  ```
+
+- Programmatic example (load CSV and show totals by category):
+
+  ```python
+  import pandas as pd
+
+  df = pd.read_csv('data/sample_transactions.csv', parse_dates=['date'])
+  totals = df.groupby('category')['amount'].sum()
+  print(totals.sort_values())
+  ```
+
+## Sample CSV
+
+Place a sample file at `data/sample_transactions.csv` (create the `data/` folder if missing). Example rows:
+
+```csv
+date,description,amount,category
+2024-01-15,Grocery Store,-45.50,Food
+2024-01-16,Salary,3000.00,Income
+2024-01-17,Restaurant,-28.00,Food
+```
+
+Tip: the app accepts ISO dates (YYYY-MM-DD) and will auto-categorize missing `category` values where possible.
 
 ## 📊 Data Format
 
