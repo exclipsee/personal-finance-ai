@@ -21,3 +21,8 @@ python-dateutil>=2.8.2
 # Environment variables
 python-dotenv>=1.0.0
 
+# Database and migrations
+SQLAlchemy>=2.0.0
+alembic>=1.11.1
+psycopg2-binary>=2.9.7
+
