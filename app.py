@@ -7,6 +7,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from observability.logging_config import get_logger
+from observability import metrics
+import os
 from pathlib import Path
 import json
 
@@ -22,14 +25,41 @@ st.set_page_config(
 st.title("💰 Personal Finance AI Assistant")
 st.markdown("Analyze your spending, predict expenses, and get AI-powered financial insights")
 
+# Initialize logging and metrics
+logger = get_logger(__name__)
+metrics_port = int(os.getenv('METRICS_PORT', '8000'))
+metrics.start_metrics_server(metrics_port)
+metrics.record_app_start()
+logger.info("app.start", extra={"metrics_port": metrics_port})
+
 # Initialize session state
 if 'transactions' not in st.session_state:
     st.session_state.transactions = pd.DataFrame()
 if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
+if 'onboard_shown' not in st.session_state:
+    st.session_state.onboard_shown = False
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'System'
 
 # Sidebar
 with st.sidebar:
+    # Theme selector (light/dark) — simple CSS injection for dark mode
+    st.markdown("**Appearance**")
+    theme_choice = st.selectbox("Theme", options=["System", "Light", "Dark"], index=["System", "Light", "Dark"].index(st.session_state.get('theme', 'System')))
+    st.session_state.theme = theme_choice
+    if theme_choice == 'Dark':
+        st.markdown(
+            """
+            <style>
+            .stApp { background-color: #0e1117; color: #e6eef8; }
+            .css-1d391kg { color: #e6eef8; }
+            .stButton>button { background-color: #1f2937; color: #e6eef8; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
     st.header("📊 Navigation")
     page = st.radio(
         "Choose a page",
@@ -65,6 +95,38 @@ if page == "🏠 Dashboard":
         
         **Get started by importing your transaction data!**
         """)
+        # Onboarding panel (collapsible) with sample-data seed
+        if not st.session_state.onboard_shown:
+            with st.expander("🧭 Quick Start / Onboarding", expanded=True):
+                st.markdown("""
+                **Welcome!** This short guide will help you get started:
+
+                1. Import a CSV or use the sample data to explore quickly.
+                2. Review recent transactions and categories on the Dashboard.
+                3. Use the Analysis page to view trends and forecasts.
+                4. Connect a bank feed later for automatic imports.
+                """)
+                col_a, col_b = st.columns([1,1])
+                with col_a:
+                    if st.button("Load sample data"):
+                        sample_path = Path("data") / "sample_transactions.csv"
+                        if sample_path.exists():
+                            df = pd.read_csv(sample_path, parse_dates=['date'])
+                        else:
+                            df = pd.DataFrame([
+                                { 'date': pd.to_datetime('2024-01-15'), 'description': 'Grocery Store', 'amount': -45.50, 'category': 'Food' },
+                                { 'date': pd.to_datetime('2024-01-16'), 'description': 'Salary', 'amount': 3000.00, 'category': 'Income' },
+                                { 'date': pd.to_datetime('2024-01-17'), 'description': 'Restaurant', 'amount': -28.00, 'category': 'Food' },
+                            ])
+                        st.session_state.transactions = df
+                        st.session_state.data_loaded = True
+                        metrics.record_file_upload(len(df))
+                        logger.info("sample.data_loaded", extra={"rows": len(df)})
+                        st.success("Sample data loaded — explore the Dashboard!")
+                with col_b:
+                    if st.button("Dismiss onboarding"):
+                        st.session_state.onboard_shown = True
+                        st.experimental_rerun()
         # Embedded import UI so users don't need a separate page
         with st.expander("📥 Import Data", expanded=True):
             tab1, tab2 = st.tabs(["📤 Upload CSV", "✏️ Manual Entry"])
@@ -114,6 +176,9 @@ if page == "🏠 Dashboard":
                             st.session_state.transactions = df
                             st.session_state.data_loaded = True
                             st.success(f"✅ Loaded {len(df)} transactions!")
+                            # record metrics
+                            metrics.record_file_upload(len(df))
+                            logger.info("transactions.loaded", extra={"rows": len(df)})
                             display_df = df.head().copy()
                             # Only format valid dates
                             display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
@@ -147,6 +212,8 @@ if page == "🏠 Dashboard":
                         st.session_state.transactions = pd.concat([st.session_state.transactions, new_trans], ignore_index=True)
 
                     st.success("Transaction added!")
+                    metrics.record_manual_add(1)
+                    logger.info("transaction.added", extra={"description": description, "amount": amount})
                     st.rerun()
     else:
         # Display summary cards
