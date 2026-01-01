@@ -5,6 +5,7 @@ services:
     build: .
     ports:
       - "8501:8501"
+      - "8000:8000" # prometheus metrics
     volumes:
       - .:/app
     environment:
@@ -25,3 +26,33 @@ services:
 volumes:
   pgdata:
     driver: local
+
+  grafana-storage:
+    driver: local
+
+  prometheus-data:
+    driver: local
+
+  
+  
+  
+prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:9.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
