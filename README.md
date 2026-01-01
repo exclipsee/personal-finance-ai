@@ -129,3 +129,29 @@ This is a personal hobby project that I use to help manage my own finances. It r
 
 MIT License – free to use and modify.
 
+## Docker
+
+Run the app locally with Docker (recommended for replicable environments):
+
+Build the image:
+
+```bash
+docker build -t personal-finance-ai:latest .
+```
+
+Run with Docker:
+
+```bash
+docker run --rm -p 8501:8501 -v "${PWD}":/app personal-finance-ai:latest
+```
+
+Or use Docker Compose for development (hot-reloads via mounted volume):
+
+```bash
+docker compose up --build
+```
+
+Notes:
+- The Docker image installs build tools to support packages that require compilation (e.g., some forecasting libs). The container exposes port `8501`.
+- If you prefer a lightweight image for production, we can create a multi-stage Dockerfile to build wheels first and then copy them into a slimmer runtime image.
+
