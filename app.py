@@ -33,7 +33,7 @@ with st.sidebar:
     st.header("📊 Navigation")
     page = st.radio(
         "Choose a page",
-        ["🏠 Dashboard", "📥 Import Data", "📈 Analysis", "🤖 AI Insights", "🎯 Goals"]
+        ["🏠 Dashboard", "📈 Analysis", "🤖 AI Insights", "🎯 Goals"]
     )
     
     st.divider()
@@ -52,7 +52,7 @@ if page == "🏠 Dashboard":
     st.header("Dashboard")
     
     if st.session_state.transactions.empty:
-        st.info("👈 Go to 'Import Data' to get started!")
+        st.info("Use the Import Data panel below to get started")
         st.markdown("""
         ### Welcome to Personal Finance AI Assistant!
         
@@ -65,6 +65,89 @@ if page == "🏠 Dashboard":
         
         **Get started by importing your transaction data!**
         """)
+        # Embedded import UI so users don't need a separate page
+        with st.expander("📥 Import Data", expanded=True):
+            tab1, tab2 = st.tabs(["📤 Upload CSV", "✏️ Manual Entry"])
+
+            with tab1:
+                st.markdown("### Upload CSV File")
+                st.markdown("""
+                Your CSV should have these columns:
+                - `date` - Transaction date (DD/MM/YYYY)
+                - `description` - Transaction description
+                - `amount` - Amount (negative for expenses, positive for income)
+                - `category` - Category (optional)
+                """)
+
+                uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+                if uploaded_file is not None:
+                    try:
+                        df = pd.read_csv(uploaded_file)
+
+                        # Validate required columns
+                        required_cols = ['date', 'description', 'amount']
+                        if not all(col in df.columns for col in required_cols):
+                            st.error(f"Missing required columns. Need: {', '.join(required_cols)}")
+                        else:
+                            # Convert date column - try European format first (DD/MM/YYYY), then fallback to auto-detect
+                            try:
+                                df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
+                                # If parsing failed, try other common formats
+                                if df['date'].isna().any():
+                                    df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+                            except:
+                                df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+
+                            # Check for invalid dates and warn user
+                            invalid_dates = df['date'].isna().sum()
+                            if invalid_dates > 0:
+                                st.warning(f"⚠️ {invalid_dates} row(s) have invalid dates and will be excluded from date-based analysis.")
+
+                            # Ensure amount is numeric
+                            df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
+
+                            # Auto-categorize if category missing
+                            if 'category' not in df.columns:
+                                df['category'] = 'Uncategorized'
+
+                            st.session_state.transactions = df
+                            st.session_state.data_loaded = True
+                            st.success(f"✅ Loaded {len(df)} transactions!")
+                            display_df = df.head().copy()
+                            # Only format valid dates
+                            display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
+                            st.dataframe(display_df, use_container_width=True)
+
+                    except Exception as e:
+                        st.error(f"Error loading file: {str(e)}")
+
+            with tab2:
+                st.markdown("### Add Transaction Manually")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    trans_date = st.date_input("Date", value=datetime.now())
+                    description = st.text_input("Description")
+                with col2:
+                    amount = st.number_input("Amount", value=0.00, step=0.01)
+                    category = st.text_input("Category", value="Uncategorized")
+
+                if st.button("Add Transaction"):
+                    new_trans = pd.DataFrame([{
+                        'date': trans_date,
+                        'description': description,
+                        'amount': amount,
+                        'category': category
+                    }])
+
+                    if st.session_state.transactions.empty:
+                        st.session_state.transactions = new_trans
+                    else:
+                        st.session_state.transactions = pd.concat([st.session_state.transactions, new_trans], ignore_index=True)
+
+                    st.success("Transaction added!")
+                    st.rerun()
     else:
         # Display summary cards
         col1, col2, col3, col4 = st.columns(4)
@@ -93,90 +176,7 @@ if page == "🏠 Dashboard":
             use_container_width=True
         )
 
-elif page == "📥 Import Data":
-    st.header("Import Transaction Data")
-    
-    tab1, tab2 = st.tabs(["📤 Upload CSV", "✏️ Manual Entry"])
-    
-    with tab1:
-        st.markdown("### Upload CSV File")
-        st.markdown("""
-        Your CSV should have these columns:
-        - `date` - Transaction date (DD/MM/YYYY)
-        - `description` - Transaction description
-        - `amount` - Amount (negative for expenses, positive for income)
-        - `category` - Category (optional)
-        """)
-        
-        uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-        
-        if uploaded_file is not None:
-            try:
-                df = pd.read_csv(uploaded_file)
-                
-                # Validate required columns
-                required_cols = ['date', 'description', 'amount']
-                if not all(col in df.columns for col in required_cols):
-                    st.error(f"Missing required columns. Need: {', '.join(required_cols)}")
-                else:
-                    # Convert date column - try European format first (DD/MM/YYYY), then fallback to auto-detect
-                    try:
-                        df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
-                        # If parsing failed, try other common formats
-                        if df['date'].isna().any():
-                            df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
-                    except:
-                        df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
-                    
-                    # Check for invalid dates and warn user
-                    invalid_dates = df['date'].isna().sum()
-                    if invalid_dates > 0:
-                        st.warning(f"⚠️ {invalid_dates} row(s) have invalid dates and will be excluded from date-based analysis.")
-                    
-                    # Ensure amount is numeric
-                    df['amount'] = pd.to_numeric(df['amount'], errors='coerce')
-                    
-                    # Auto-categorize if category missing
-                    if 'category' not in df.columns:
-                        df['category'] = 'Uncategorized'
-                    
-                    st.session_state.transactions = df
-                    st.session_state.data_loaded = True
-                    st.success(f"✅ Loaded {len(df)} transactions!")
-                    display_df = df.head().copy()
-                    # Only format valid dates
-                    display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
-                    st.dataframe(display_df, use_container_width=True)
-                    
-            except Exception as e:
-                st.error(f"Error loading file: {str(e)}")
-    
-    with tab2:
-        st.markdown("### Add Transaction Manually")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            trans_date = st.date_input("Date", value=datetime.now())
-            description = st.text_input("Description")
-        with col2:
-            amount = st.number_input("Amount", value=0.00, step=0.01)
-            category = st.text_input("Category", value="Uncategorized")
-        
-        if st.button("Add Transaction"):
-            new_trans = pd.DataFrame([{
-                'date': trans_date,
-                'description': description,
-                'amount': amount,
-                'category': category
-            }])
-            
-            if st.session_state.transactions.empty:
-                st.session_state.transactions = new_trans
-            else:
-                st.session_state.transactions = pd.concat([st.session_state.transactions, new_trans], ignore_index=True)
-            
-            st.success("Transaction added!")
-            st.rerun()
+# Import UI has been embedded into the Dashboard; the separate Import page was removed.
 
 elif page == "📈 Analysis":
     st.header("Spending Analysis")
