@@ -49,16 +49,61 @@ with st.sidebar:
     theme_choice = st.selectbox("Theme", options=["System", "Light", "Dark"], index=["System", "Light", "Dark"].index(st.session_state.get('theme', 'System')))
     st.session_state.theme = theme_choice
     if theme_choice == 'Dark':
+        # Immediate CSS to style app, sidebar, and toolbar where possible
         st.markdown(
             """
             <style>
-            .stApp { background-color: #0e1117; color: #e6eef8; }
-            .css-1d391kg { color: #e6eef8; }
-            .stButton>button { background-color: #1f2937; color: #e6eef8; }
+            [data-testid="stAppViewContainer"] { background-color: #0e1117 !important; color: #e6eef8 !important; }
+            .stApp .block-container { background-color: #0e1117 !important; color: #e6eef8 !important; }
+            [data-testid="stSidebar"] { background-color: #0e1117 !important; color: #e6eef8 !important; }
+            [data-testid="stToolbar"] { background-color: #0e1117 !important; color: #e6eef8 !important; }
+            button[kind] { background-color: #1f2937 !important; color: #e6eef8 !important; }
+            input, textarea { background-color: #0e1117 !important; color: #e6eef8 !important; }
             </style>
             """,
             unsafe_allow_html=True,
         )
+        # Persist theme selection so Streamlit native theming applies after restart
+        try:
+            cfg_dir = Path('.streamlit')
+            cfg_dir.mkdir(exist_ok=True)
+            cfg_file = cfg_dir / 'config.toml'
+            text = cfg_file.read_text(encoding='utf-8') if cfg_file.exists() else ''
+            # preserve existing content except any existing [theme] section
+            lines = []
+            skip = False
+            for line in text.splitlines():
+                if line.strip().startswith('[theme]'):
+                    skip = True
+                    continue
+                if skip and line.startswith('['):
+                    skip = False
+                if not skip:
+                    lines.append(line)
+            new_text = '\n'.join(lines).strip() + '\n\n[theme]\nbase = "dark"\n'
+            cfg_file.write_text(new_text, encoding='utf-8')
+            st.info('Theme persisted to .streamlit/config.toml — restart the app to apply to the entire UI.')
+        except Exception as e:
+            logger.exception('failed to persist theme', extra={'error': str(e)})
+    else:
+        # Remove any persisted theme section so Streamlit returns to system/default theme
+        try:
+            cfg_file = Path('.streamlit') / 'config.toml'
+            if cfg_file.exists():
+                text = cfg_file.read_text(encoding='utf-8')
+                lines = []
+                skip = False
+                for line in text.splitlines():
+                    if line.strip().startswith('[theme]'):
+                        skip = True
+                        continue
+                    if skip and line.startswith('['):
+                        skip = False
+                    if not skip:
+                        lines.append(line)
+                cfg_file.write_text('\n'.join(lines).strip() + '\n', encoding='utf-8')
+        except Exception:
+            pass
 
     st.header("📊 Navigation")
     page = st.radio(
