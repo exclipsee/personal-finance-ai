@@ -3,7 +3,7 @@ name = "personal-finance-ai"
 version = "0.1.0"
 description = "An intelligent personal finance assistant with AI-powered insights"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "streamlit>=1.28.0",
     "pandas>=2.2.0",
@@ -27,7 +27,7 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ["py310"]
+target-version = ["py312"]
 
 [tool.isort]
 profile = "black"
