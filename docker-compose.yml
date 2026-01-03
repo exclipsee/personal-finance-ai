@@ -11,6 +11,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+
   db:
     image: postgres:16
     environment:
@@ -23,21 +24,8 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-volumes:
-  pgdata:
-    driver: local
-
-  grafana-storage:
-    driver: local
-
-  prometheus-data:
-    driver: local
-
-  
-  
-  
-prometheus:
-    image: prom/prometheus:latest
+  prometheus:
+    image: prom/prometheus:v2.45.0
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -48,7 +36,7 @@ prometheus:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:9.0.0
+    image: grafana/grafana:10.0.0
     ports:
       - "3000:3000"
     volumes:
@@ -56,3 +44,13 @@ prometheus:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+
+  grafana-storage:
+    driver: local
+
+  prometheus-data:
+    driver: local
