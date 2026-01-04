@@ -27,7 +27,7 @@ alembic>=1.11.1
 psycopg2-binary>=2.9.7
  
 # Observability
-prometheus_client>=0.16.0
+prometheus_client>=0.17.0
 python-json-logger>=2.0.4
 
 # Backend / Auth
