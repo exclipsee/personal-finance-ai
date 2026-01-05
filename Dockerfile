@@ -5,7 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install build dependencies only in the builder stage
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
@@ -16,7 +15,6 @@ RUN apt-get update \
        libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files and build wheel cache
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip setuptools wheel \
     && pip wheel --no-cache-dir -r requirements.txt -w /wheels
@@ -41,7 +39,6 @@ RUN python -m pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir /wheels/* \
     && rm -rf /wheels
 
-# Copy project
 COPY . /app
 
 EXPOSE 8501
