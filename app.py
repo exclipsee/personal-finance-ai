@@ -1,7 +1,3 @@
-"""
-Personal Finance AI Assistant
-Main Streamlit application
-"""
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -20,7 +16,6 @@ def _fmt_money(val):
     except Exception:
         return str(val)
 
-# Page configuration
 st.set_page_config(
     page_title="Personal Finance AI Assistant",
     page_icon="💰",
@@ -51,12 +46,12 @@ if 'theme' not in st.session_state:
 
 # Sidebar
 with st.sidebar:
-    # Theme selector (light/dark) — simple CSS injection for dark mode
+    # Theme selector
     st.markdown("**Appearance**")
     theme_choice = st.selectbox("Theme", options=["System", "Light", "Dark"], index=["System", "Light", "Dark"].index(st.session_state.get('theme', 'System')))
     st.session_state.theme = theme_choice
     if theme_choice == 'Dark':
-        # Immediate CSS to style app, sidebar, and toolbar where possible
+        # Immediate CSS
         st.markdown(
             """
             <style>
@@ -76,7 +71,6 @@ with st.sidebar:
             cfg_dir.mkdir(exist_ok=True)
             cfg_file = cfg_dir / 'config.toml'
             text = cfg_file.read_text(encoding='utf-8') if cfg_file.exists() else ''
-            # preserve existing content except any existing [theme] section
             lines = []
             skip = False
             for line in text.splitlines():
@@ -147,7 +141,7 @@ if page == "🏠 Dashboard":
         
         **Get started by importing your transaction data!**
         """)
-        # Onboarding panel (collapsible) with sample-data seed
+        # Onboarding panel
         if not st.session_state.onboard_shown:
             with st.expander("🧭 Quick Start / Onboarding", expanded=True):
                 st.markdown("""
@@ -179,7 +173,7 @@ if page == "🏠 Dashboard":
                     if st.button("Dismiss onboarding"):
                         st.session_state.onboard_shown = True
                         st.experimental_rerun()
-        # Embedded import UI so users don't need a separate page
+        # Embedded import UI
         with st.expander("📥 Import Data", expanded=True):
             tab1, tab2 = st.tabs(["📤 Upload CSV", "✏️ Manual Entry"])
 
@@ -204,10 +198,9 @@ if page == "🏠 Dashboard":
                         if not all(col in df.columns for col in required_cols):
                             st.error(f"Missing required columns. Need: {', '.join(required_cols)}")
                         else:
-                            # Convert date column - try European format first (DD/MM/YYYY), then fallback to auto-detect
+                            # Convert date column
                             try:
                                 df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y', errors='coerce')
-                                # If parsing failed, try other common formats
                                 if df['date'].isna().any():
                                     df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
                             except:
