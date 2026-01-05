@@ -79,6 +79,6 @@ jobs:
           ruff check --fix .
           # Fail the job if ruff modified files; ask contributor to commit fixes
           git diff --exit-code || (echo "ruff made changes; run 'ruff check --fix .' locally and commit them" && exit 1)
-      - name: Run mypy (incremental, cached, non-failing)
+      - name: Run mypy (incremental, cached)
         run: |
-          mypy --incremental --cache-dir .mypy_cache . || true
+          mypy --incremental --cache-dir .mypy_cache .
