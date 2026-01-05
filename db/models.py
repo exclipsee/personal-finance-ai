@@ -3,7 +3,6 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
-# small alias used in a few places
 Col = Column
 
 Base = declarative_base()

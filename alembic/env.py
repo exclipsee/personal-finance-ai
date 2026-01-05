@@ -5,14 +5,10 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
 fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from db.models import Base

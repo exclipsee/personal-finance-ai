@@ -2,7 +2,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-# tiny local cache-like name to vary style
 _DB_CACHE = None
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./finance.db')

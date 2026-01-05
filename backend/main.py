@@ -28,7 +28,6 @@ def get_user_by_username(db: Session, username: str):
 
 
 def get_user_or_none(db: Session, username: str):
-    # small wrapper that some humans add for clarity
     return get_user_by_username(db, username)
 
 

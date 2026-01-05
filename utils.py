@@ -11,7 +11,6 @@ def _to_float(v):
         return 0.0
 
 def load_transactions(file_path: str) -> pd.DataFrame:
-    """Load transactions from CSV file."""
     df = pd.read_csv(file_path)
     if 'date' in df.columns:
         df['date'] = pd.to_datetime(df['date'], errors='coerce')
@@ -20,16 +19,6 @@ def load_transactions(file_path: str) -> pd.DataFrame:
     return df
 
 def auto_categorize(description: str, categories: Optional[Dict[str, List[str]]] = None) -> str:
-    """
-    Auto-categorize transaction based on description.
-    
-    Args:
-        description: Transaction description
-        categories: Optional custom category keywords
-    
-    Returns:
-        Category name
-    """
     if categories is None:
         categories = {
             'Food': ['grocery', 'restaurant', 'coffee', 'food', 'mcdonald', 'starbucks', 'pizza'],
@@ -51,7 +40,6 @@ def auto_categorize(description: str, categories: Optional[Dict[str, List[str]]]
     return 'Other'
 
 def calculate_summary_stats(df: pd.DataFrame) -> Dict:
-    """Calculate summary statistics from transactions."""
     expenses = df[df['amount'] < 0]
     income = df[df['amount'] > 0]
     
@@ -72,7 +60,6 @@ def calculate_summary_stats(df: pd.DataFrame) -> Dict:
     }
 
 def get_category_breakdown(df: pd.DataFrame) -> pd.DataFrame:
-    """Get spending breakdown by category."""
     expenses = df[df['amount'] < 0].copy()
     expenses['amount'] = expenses['amount'].abs()
     
@@ -86,7 +73,6 @@ def get_category_breakdown(df: pd.DataFrame) -> pd.DataFrame:
     return grouped.sort_values('Total', ascending=False)
 
 def get_daily_spending(df: pd.DataFrame) -> pd.Series:
-    """Get daily spending totals."""
     expenses = df[df['amount'] < 0].copy()
     expenses['amount'] = expenses['amount'].abs()
     
@@ -97,7 +83,6 @@ def get_daily_spending(df: pd.DataFrame) -> pd.Series:
     return daily
 
 def filter_by_date_range(df: pd.DataFrame, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-    """Filter transactions by date range."""
     mask = (df['date'].dt.date >= start_date.date()) & (df['date'].dt.date <= end_date.date())
     return df[mask]
 

@@ -5,7 +5,6 @@ import logging
 
 METRICS_PORT = int(os.getenv('METRICS_PORT', '8000'))
 
-# Define metrics
 FILES_UPLOADED = Counter('pfai_files_uploaded_total', 'Total CSV files uploaded')
 TRANSACTIONS_ADDED = Counter('pfai_transactions_added_total', 'Total transactions added')
 APP_STARTS = Counter('pfai_app_starts_total', 'Number of app starts')
