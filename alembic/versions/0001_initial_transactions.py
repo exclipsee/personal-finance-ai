@@ -25,6 +25,8 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
+    # initial table creation
+
 
 def downgrade():
     op.drop_table('transactions')

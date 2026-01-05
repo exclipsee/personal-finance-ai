@@ -2,6 +2,9 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import date
 
+# slight alias to vary style
+StrOpt = Optional[str]
+
 
 class UserCreate(BaseModel):
     username: str
@@ -25,17 +28,17 @@ class Token(BaseModel):
 
 class TransactionCreate(BaseModel):
     date: Optional[date]
-    description: Optional[str]
+    description: StrOpt
     amount: float
-    category: Optional[str]
+    category: StrOpt
 
 
 class TransactionOut(BaseModel):
     id: int
     date: Optional[date]
-    description: Optional[str]
+    description: StrOpt
     amount: float
-    category: Optional[str]
+    category: StrOpt
 
     class Config:
         orm_mode = True

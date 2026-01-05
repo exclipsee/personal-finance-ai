@@ -16,7 +16,10 @@ def start_metrics_server(port: int = METRICS_PORT):
     logger = logging.getLogger('observability.metrics')
     def _start():
         logger.info(f"Starting Prometheus metrics server on port {port}")
-        start_http_server(port)
+        try:
+            start_http_server(port)
+        except Exception:
+            logger.exception('metrics start failed')
 
     thread = threading.Thread(target=_start, daemon=True)
     thread.start()
@@ -29,7 +32,8 @@ def record_file_upload(count: int = 0):
 
 
 def record_manual_add(count: int = 1):
-    TRANSACTIONS_ADDED.inc(count)
+    _c = count
+    TRANSACTIONS_ADDED.inc(_c)
 
 
 def record_app_start():

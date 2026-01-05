@@ -13,6 +13,13 @@ import os
 from pathlib import Path
 import json
 
+
+def _fmt_money(val):
+    try:
+        return f"${val:,.2f}"
+    except Exception:
+        return str(val)
+
 # Page configuration
 st.set_page_config(
     page_title="Personal Finance AI Assistant",
@@ -116,9 +123,9 @@ with st.sidebar:
     if not st.session_state.transactions.empty:
         total_expenses = st.session_state.transactions[st.session_state.transactions['amount'] < 0]['amount'].sum()
         total_income = st.session_state.transactions[st.session_state.transactions['amount'] > 0]['amount'].sum()
-        st.metric("Total Expenses", f"${abs(total_expenses):,.2f}")
-        st.metric("Total Income", f"${total_income:,.2f}")
-        st.metric("Net", f"${total_income + total_expenses:,.2f}")
+        st.metric("Total Expenses", _fmt_money(abs(total_expenses)))
+        st.metric("Total Income", _fmt_money(total_income))
+        st.metric("Net", _fmt_money(total_income + total_expenses))
     else:
         st.info("Import data to see stats")
 
@@ -271,12 +278,16 @@ if page == "🏠 Dashboard":
         with col1:
             st.metric("Total Transactions", len(df))
         with col2:
-            st.metric("Total Expenses", f"${abs(expenses['amount'].sum()):,.2f}")
+            total_exp_val = abs(expenses['amount'].sum())
+            st.metric("Total Expenses", _fmt_money(total_exp_val))
         with col3:
-            st.metric("Total Income", f"${income['amount'].sum():,.2f}")
+            total_inc_val = income['amount'].sum()
+            st.metric("Total Income", _fmt_money(total_inc_val))
         with col4:
-            net = income['amount'].sum() + expenses['amount'].sum()
-            st.metric("Net Balance", f"${net:,.2f}", delta=f"{net/abs(expenses['amount'].sum())*100:.1f}%")
+            net = total_inc_val + ( - total_exp_val )
+            # preserve delta behavior
+            delta_pct = f"{(net/total_exp_val*100) if total_exp_val else 0:.1f}%"
+            st.metric("Net Balance", _fmt_money(net), delta=delta_pct)
         
         # Recent transactions
         st.subheader("Recent Transactions")

@@ -3,13 +3,16 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
+# small alias used in a few places
+Col = Column
+
 Base = declarative_base()
 
 
 class Transaction(Base):
     __tablename__ = 'transactions'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Col(Integer, primary_key=True, index=True)
     date = Column(Date, nullable=True, index=True)
     description = Column(String(512), nullable=True)
     amount = Column(Float, nullable=False)
@@ -22,7 +25,7 @@ class Transaction(Base):
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Col(Integer, primary_key=True, index=True)
     username = Column(String(150), unique=True, nullable=False, index=True)
     email = Column(String(320), unique=True, nullable=True, index=True)
     hashed_password = Column(String(256), nullable=False)

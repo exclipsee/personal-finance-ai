@@ -27,6 +27,8 @@ def upgrade():
     op.create_foreign_key('fk_transactions_user', 'transactions', 'users', ['user_id'], ['id'])
     op.create_index(op.f('ix_transactions_user_id'), 'transactions', ['user_id'], unique=False)
 
+    # add users + user_id index
+
 
 def downgrade():
     op.drop_index(op.f('ix_transactions_user_id'), table_name='transactions')

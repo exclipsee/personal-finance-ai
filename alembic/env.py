@@ -21,7 +21,7 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    return os.getenv('DATABASE_URL', 'sqlite:///./finance.db')
+    return os.getenv('DATABASE_URL', 'sqlite:///./finance.db').strip()
 
 
 def run_migrations_offline():

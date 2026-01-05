@@ -13,13 +13,16 @@ def configure_logging(level: str = None):
     formatter = jsonlogger.JsonFormatter('%(asctime)s %(name)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
 
-    # remove existing handlers to avoid duplicate logs
     if logger.handlers:
         logger.handlers = []
 
-    logger.addHandler(handler)
+    try:
+        logger.addHandler(handler)
+    except Exception:
+        logging.basicConfig(stream=sys.stdout, level=level)
 
 
 def get_logger(name: str):
     configure_logging()
+    _n = name
     return logging.getLogger(name)
