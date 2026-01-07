@@ -1,10 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from observability.logging_config import get_logger
-from observability import metrics
 import os
 from pathlib import Path
 import json
@@ -27,12 +23,7 @@ st.set_page_config(
 st.title("💰 Personal Finance AI Assistant")
 st.markdown("Analyze your spending, predict expenses, and get AI-powered financial insights")
 
-# Initialize logging and metrics
-logger = get_logger(__name__)
-metrics_port = int(os.getenv('METRICS_PORT', '8000'))
-metrics.start_metrics_server(metrics_port)
-metrics.record_app_start()
-logger.info("app.start", extra={"metrics_port": metrics_port})
+# lightweight: no external logging/metrics in simplified app
 
 # Initialize session state
 if 'transactions' not in st.session_state:
@@ -166,8 +157,6 @@ if page == "🏠 Dashboard":
                             ])
                         st.session_state.transactions = df
                         st.session_state.data_loaded = True
-                        metrics.record_file_upload(len(df))
-                        logger.info("sample.data_loaded", extra={"rows": len(df)})
                         st.success("Sample data loaded — explore the Dashboard!")
                 with col_b:
                     if st.button("Dismiss onboarding"):
@@ -221,9 +210,6 @@ if page == "🏠 Dashboard":
                             st.session_state.transactions = df
                             st.session_state.data_loaded = True
                             st.success(f"✅ Loaded {len(df)} transactions!")
-                            # record metrics
-                            metrics.record_file_upload(len(df))
-                            logger.info("transactions.loaded", extra={"rows": len(df)})
                             display_df = df.head().copy()
                             # Only format valid dates
                             display_df.loc[display_df['date'].notna(), 'date'] = display_df.loc[display_df['date'].notna(), 'date'].dt.strftime('%d/%m/%Y')
@@ -257,8 +243,6 @@ if page == "🏠 Dashboard":
                         st.session_state.transactions = pd.concat([st.session_state.transactions, new_trans], ignore_index=True)
 
                     st.success("Transaction added!")
-                    metrics.record_manual_add(1)
-                    logger.info("transaction.added", extra={"description": description, "amount": amount})
                     st.rerun()
     else:
         # Display summary cards
@@ -333,36 +317,13 @@ elif page == "📈 Analysis":
             with col1:
                 st.subheader("Spending by Category")
 
-                if filtered_expenses.empty or 'category' not in filtered_expenses.columns:
-                    st.info("No category data available")
-                else:
-                    top_n = st.selectbox("Top categories to show", options=[5, 10, 20, 50], index=1)
-                    cat_choice = st.selectbox("Chart type", options=["Pie", "Donut", "Bar", "Treemap", "Sunburst"], index=1)
-
-                    category_sum = filtered_expenses.groupby('category')['amount'].sum().sort_values(ascending=False)
-                    category_sum = category_sum.head(top_n)
-
-                    if cat_choice == "Pie":
-                        fig = px.pie(values=category_sum.values, names=category_sum.index, title="Expenses by Category")
-                        st.plotly_chart(fig, use_container_width=True)
-
-                    elif cat_choice == "Donut":
-                        fig = px.pie(values=category_sum.values, names=category_sum.index, title="Expenses by Category (Donut)", hole=0.4)
-                        st.plotly_chart(fig, use_container_width=True)
-
-                    elif cat_choice == "Bar":
-                        fig = px.bar(x=category_sum.index, y=category_sum.values, title="Expenses by Category", labels={'x': 'Category', 'y': 'Amount ($)'})
-                        fig.update_layout(xaxis={'categoryorder':'total descending'})
-                        st.plotly_chart(fig, use_container_width=True)
-
-                    elif cat_choice == "Treemap":
-                        fig = px.treemap(names=category_sum.index, values=category_sum.values, title="Expenses Treemap")
-                        st.plotly_chart(fig, use_container_width=True)
-
-                    elif cat_choice == "Sunburst":
-                        # Simple one-level sunburst (can be extended to hierarchical categories)
-                        fig = px.sunburst(names=category_sum.index, values=category_sum.values, title="Expenses Sunburst")
-                        st.plotly_chart(fig, use_container_width=True)
+                    if filtered_expenses.empty or 'category' not in filtered_expenses.columns:
+                        st.info("No category data available")
+                    else:
+                        top_n = st.selectbox("Top categories to show", options=[5, 10, 20, 50], index=1)
+                        category_sum = filtered_expenses.groupby('category')['amount'].sum().abs().sort_values(ascending=False).head(top_n)
+                        st.subheader("Expenses by Category")
+                        st.bar_chart(category_sum)
 
             # --- Right: Spending Over Time with frequency and chart selector ---
             with col2:
@@ -373,67 +334,37 @@ elif page == "📈 Analysis":
                 else:
                     # Prepare valid dated expenses
                     valid_expenses = filtered_expenses[filtered_expenses['date'].notna()].copy()
-                    if valid_expenses.empty:
-                        st.info("No valid dates in filtered data")
-                    else:
                         freq = st.selectbox("Frequency", options=["Daily", "Weekly", "Monthly"], index=0)
-                        time_chart = st.selectbox("Chart type", options=["Line", "Area", "Bar", "Rolling Average", "Heatmap (month vs weekday)"], index=0)
-
-                        # Resample rule map
                         rule_map = {"Daily": 'D', "Weekly": 'W', "Monthly": 'M'}
                         rule = rule_map.get(freq, 'D')
 
-                        # Ensure datetime index for resampling
                         valid_expenses['date'] = pd.to_datetime(valid_expenses['date'])
                         ts = valid_expenses.set_index('date').resample(rule)['amount'].sum().abs()
 
                         if ts.empty:
                             st.info("No time-series data after resampling")
                         else:
-                            if time_chart in ("Line", "Area"):
-                                title = f"{freq} Spending"
-                                if time_chart == "Line":
-                                    fig = px.line(x=ts.index, y=ts.values, title=title, labels={'x':'Date','y':'Amount ($)'})
-                                else:
-                                    fig = px.area(x=ts.index, y=ts.values, title=title, labels={'x':'Date','y':'Amount ($)'})
-                                st.plotly_chart(fig, use_container_width=True)
-
-                            elif time_chart == "Bar":
-                                fig = px.bar(x=ts.index, y=ts.values, title=f"{freq} Spending (Bar)", labels={'x':'Date','y':'Amount ($)'})
-                                st.plotly_chart(fig, use_container_width=True)
-
-                            elif time_chart == "Rolling Average":
-                                # Rolling window depends on frequency
+                            choice = st.selectbox("Chart type", options=["Line", "Bar", "Rolling Average", "Heatmap"], index=0)
+                            if choice in ("Line", "Bar"):
+                                st.line_chart(ts)
+                            elif choice == "Rolling Average":
                                 window_map = {'D':7, 'W':4, 'M':3}
                                 w = window_map.get(rule, 7)
                                 rolling = ts.rolling(window=w, min_periods=1).mean()
-                                fig = go.Figure()
-                                fig.add_trace(go.Bar(x=ts.index, y=ts.values, name='Amount', marker_color='lightgray'))
-                                fig.add_trace(go.Line(x=rolling.index, y=rolling.values, name=f'Rolling Avg ({w})', line=dict(color='crimson', width=3)))
-                                fig.update_layout(title=f"{freq} Spending with Rolling Average")
-                                st.plotly_chart(fig, use_container_width=True)
-
+                                df_ts = pd.DataFrame({'amount': ts, 'rolling': rolling})
+                                st.line_chart(df_ts)
                             else:
-                                # Heatmap: month vs weekday
                                 ve = valid_expenses.copy()
                                 ve['month'] = ve['date'].dt.strftime('%Y-%m')
                                 ve['weekday'] = ve['date'].dt.day_name()
                                 pivot = ve.groupby(['month','weekday'])['amount'].sum().abs().reset_index()
-                                # Ensure weekdays order
                                 weekdays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
                                 pivot['weekday'] = pd.Categorical(pivot['weekday'], categories=weekdays, ordered=True)
                                 heat = pivot.pivot(index='weekday', columns='month', values='amount').fillna(0)
                                 if heat.empty:
                                     st.info("Not enough data to build heatmap")
                                 else:
-                                    fig = go.Figure(data=go.Heatmap(
-                                        z=heat.values,
-                                        x=list(heat.columns),
-                                        y=list(heat.index),
-                                        colorscale='YlOrRd'
-                                    ))
-                                    fig.update_layout(title='Spending Heatmap (month vs weekday)', xaxis_title='Month', yaxis_title='Weekday')
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    st.dataframe(heat)
 
             # Category breakdown table
             st.subheader("Category Breakdown")
