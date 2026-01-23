@@ -56,3 +56,26 @@ Contributing & License
 ----------------------
 Contributions welcome; please open issues or PRs. Licensed under MIT.
 
+Agent helpers
+-------------
+This repository now includes a small local `agent` module with helpers
+for summarizing transactions and optionally querying Kaggle metadata.
+
+Usage (CLI):
+
+```powershell
+python run_agent.py summarize --limit 200
+python run_agent.py fetch-kaggle --query "personal finance" --max 5
+```
+
+Local `.env` support
+--------------------
+- You can create a `.env` file at the project root with development-only
+  secrets (do not commit). Example keys: `OPENAI_API_KEY`, `KAGGLE_API_TOKEN`,
+  `DATABASE_URL`.
+- The CLI already loads `./.env` automatically when present.
+
+Security
+--------
+- Add `.env` to your `.gitignore` to avoid accidentally committing secrets.
+

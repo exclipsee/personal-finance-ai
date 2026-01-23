@@ -1,0 +1,5 @@
+# Optional dependencies for the local AI agent helpers
+openai>=0.27.0
+python-dotenv>=1.0.0
+# Optional: install the Kaggle client if you plan to use Kaggle fetching
+# kaggle>=1.5.12
