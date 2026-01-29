@@ -7,3 +7,9 @@ python-dateutil>=2.8.2
 # Optional: Plaid SDK (install only when enabling Plaid integration)
 # plaid-python>=9.0.0
 scikit-learn>=1.4.0
+numpy>=1.26.0
+joblib>=1.3.2
+# Optional: faiss-cpu for faster local vector search
+# faiss-cpu>=1.7.3
+# Optional: sentence-transformers for local dense embeddings
+# sentence-transformers>=2.2.2
