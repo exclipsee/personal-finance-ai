@@ -35,3 +35,20 @@ DATABASE_URL=sqlite:///./finance.db
 
 - The `run_agent.py` command will automatically load `./.env` if present.
 - Add `.env` to `.gitignore` to avoid accidental commits (see project README).
+
+CSV import and connectors
+- Use `scripts/import_csv.py` to import bank CSV exports into the local DB.
+
+```powershell
+python scripts/import_csv.py path/to/your.csv --bank chase
+```
+
+- There are stubs for Plaid and Yodlee in `ingest/plaid.py` and `ingest/yodlee.py`.
+  Real integration requires installing the provider SDKs and setting credentials
+  in environment variables (see `.env.example`).
+
+Categorization ML
+- Train a simple TF-IDF + LogisticRegression model from existing labeled
+  transactions: `python scripts/train_categorizer.py`.
+- Apply predictions to unlabeled transactions: `python scripts/apply_categorizer.py --limit 200`.
+- Submit user-corrected labels (feedback) with: `python scripts/feedback_cli.py --tx 123 --new "Groceries" --user demo`.

@@ -3,3 +3,7 @@ openai>=0.27.0
 python-dotenv>=1.0.0
 # Optional: install the Kaggle client if you plan to use Kaggle fetching
 # kaggle>=1.5.12
+python-dateutil>=2.8.2
+# Optional: Plaid SDK (install only when enabling Plaid integration)
+# plaid-python>=9.0.0
+scikit-learn>=1.4.0
