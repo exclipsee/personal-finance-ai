@@ -52,3 +52,31 @@ Categorization ML
   transactions: `python scripts/train_categorizer.py`.
 - Apply predictions to unlabeled transactions: `python scripts/apply_categorizer.py --limit 200`.
 - Submit user-corrected labels (feedback) with: `python scripts/feedback_cli.py --tx 123 --new "Groceries" --user demo`.
+
+Privacy & Compliance
+- Export a user's data (transactions + feedback) for portability:
+
+```powershell
+python scripts/export_user.py --username demo --out exports/demo.json
+```
+
+- Delete a user's data (destructive; requires `--yes`):
+
+```powershell
+python scripts/delete_user.py --username demo --yes
+```
+
+- Purge old data according to retention policy (reads `RETENTION_DAYS` from env):
+
+```powershell
+python scripts/retention_purge.py
+```
+
+- Create an encrypted backup of the local DB (requires `DB_BACKUP_KEY` in env):
+
+```powershell
+# generate key (do NOT commit)
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+$env:DB_BACKUP_KEY = '...'
+python scripts/backup_db.py
+```
