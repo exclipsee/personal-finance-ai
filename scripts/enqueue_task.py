@@ -24,10 +24,7 @@ def main():
     p_imp.add_argument("path")
     p_imp.add_argument("--bank", default=None)
 
-    p_be = sub.add_parser("build_embeddings")
-    p_be.add_argument("--provider", default="auto")
-
-    sub.add_parser("train_categorizer")
+    # build_embeddings and train_categorizer are now no-op stubs (offloaded)
     sub.add_parser("backup_db")
     sub.add_parser("retention_purge")
 

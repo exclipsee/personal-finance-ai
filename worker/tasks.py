@@ -15,8 +15,6 @@ from celery_app import celery_app
 from db.database import SessionLocal
 
 import ingest.csv_import as csv_import
-import ingest.embeddings as embeddings
-import ingest.categorizer as categorizer
 import scripts.backup_db as backup_mod
 import scripts.retention_purge as retention_mod
 
@@ -30,24 +28,15 @@ def import_csv_task(path: str, bank: str | None = None) -> dict:
     return {"inserted": inserted}
 
 
+# Embeddings and categorization tasks have been offloaded; stubs remain
 @celery_app.task(name="tasks.build_embeddings")
 def build_embeddings_task(provider: str = "auto") -> dict:
-    session = SessionLocal()
-    try:
-        path = embeddings.build_embeddings(session, out_dir=Path("models"), provider=provider)
-        return {"artifact": str(path)}
-    finally:
-        session.close()
+    return {"error": "Embeddings functionality is offloaded. Re-enable by adding the extras package."}
 
 
 @celery_app.task(name="tasks.train_categorizer")
 def train_categorizer_task() -> dict:
-    session = SessionLocal()
-    try:
-        model_path = categorizer.train_model(session, Path("models/categorizer.joblib"))
-        return {"model": str(model_path)}
-    finally:
-        session.close()
+    return {"error": "Categorization functionality is offloaded. Re-enable by adding the extras package."}
 
 
 @celery_app.task(name="tasks.backup_db")

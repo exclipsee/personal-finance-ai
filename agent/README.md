@@ -48,10 +48,8 @@ python scripts/import_csv.py path/to/your.csv --bank chase
   in environment variables (see `.env.example`).
 
 Categorization ML
-- Train a simple TF-IDF + LogisticRegression model from existing labeled
-  transactions: `python scripts/train_categorizer.py`.
-- Apply predictions to unlabeled transactions: `python scripts/apply_categorizer.py --limit 200`.
-- Submit user-corrected labels (feedback) with: `python scripts/feedback_cli.py --tx 123 --new "Groceries" --user demo`.
+- Categorization & embeddings have been moved to an optional extras package to keep this repository lightweight. If you need the full ML tooling, extract the `ingest/` ML modules into a separate package and install the extra dependencies (`scikit-learn`, `joblib`, `numpy`).
+- The feedback CLI remains available: `python scripts/feedback_cli.py --tx 123 --new "Groceries" --user demo`.
 
 Privacy & Compliance
 - Export a user's data (transactions + feedback) for portability:
