@@ -53,3 +53,8 @@ Thumbs.db
 # Streamlit
 .streamlit/
 
+# Model artifacts
+models/
+models/*.joblib
+models/*.pkl
+
