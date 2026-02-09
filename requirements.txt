@@ -1,13 +1,1 @@
-# Core dependencies (kept minimal for local/simple runs)
-streamlit>=1.30.0
-pandas>=2.3.0
-numpy>=1.26.0
-
-# Data processing
-python-dateutil>=2.8.2
-
-# Environment variables
-python-dotenv>=1.0.0
-
-# Heavy/optional packages moved to `requirements.extra.txt` to keep installs small.
-
+Flask
