@@ -2,10 +2,13 @@ from flask import Flask, request, jsonify
 import os
 import sqlite3
 import tempfile
+from flask import send_file
 
 import db
 import importer
 import categorizer
+import sync
+import excel
 
 DB_PATH = os.environ.get('LITE_DB', 'lite.db')
 app = Flask(__name__)
@@ -42,6 +45,34 @@ def list_route():
 def categorize_route():
     updated = categorizer.categorize_all(db_path=DB_PATH)
     return jsonify({'updated': updated})
+
+
+@app.route('/sync/upload', methods=['POST'])
+def sync_upload_route():
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'no file uploaded'}), 400
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+    f.save(tmp.name)
+    tmp.close()
+    result = sync.merge_xlsx(tmp.name, db_path=DB_PATH)
+    os.unlink(tmp.name)
+    return jsonify(result)
+
+
+@app.route('/sync/pull', methods=['GET'])
+def sync_pull_route():
+    fmt = request.args.get('format', 'json')
+    if fmt == 'xlsx':
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+        excel.export_xlsx(tmp.name, db_path=DB_PATH)
+        return send_file(tmp.name, as_attachment=True, download_name='transactions.xlsx')
+    # default JSON
+    rows = db.get_all_transactions(db_path=DB_PATH)
+    result = []
+    for id_, date, desc, amt, cat, ext in rows:
+        result.append({'id': id_, 'date': date, 'description': desc, 'amount': amt, 'category': cat, 'external_id': ext})
+    return jsonify(result)
 
 
 if __name__ == '__main__':
