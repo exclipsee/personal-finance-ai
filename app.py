@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import os
 import sqlite3
 import tempfile
@@ -73,6 +73,39 @@ def sync_pull_route():
     for id_, date, desc, amt, cat, ext in rows:
         result.append({'id': id_, 'date': date, 'description': desc, 'amount': amt, 'category': cat, 'external_id': ext})
     return jsonify(result)
+
+
+@app.route('/ui', methods=['GET'])
+def ui_route():
+    # simple bulk edit UI served from templates/bulk_edit.html
+    return render_template('bulk_edit.html')
+
+
+@app.route('/api/transactions', methods=['GET'])
+def api_transactions():
+    rows = db.get_all_transactions(db_path=DB_PATH)
+    result = []
+    for id_, date, desc, amt, cat, ext in rows:
+        result.append({'id': id_, 'date': date, 'description': desc, 'amount': amt, 'category': cat, 'external_id': ext})
+    return jsonify(result)
+
+
+@app.route('/api/apply_bulk', methods=['POST'])
+def api_apply_bulk():
+    data = request.get_json() or {}
+    updates = data.get('updates', [])
+    applied = 0
+    for u in updates:
+        try:
+            tx_id = int(u.get('id'))
+            cat = u.get('category')
+            if cat is None:
+                continue
+            db.update_category(tx_id, cat, db_path=DB_PATH)
+            applied += 1
+        except Exception:
+            continue
+    return jsonify({'applied': applied, 'requested': len(updates)})
 
 
 if __name__ == '__main__':

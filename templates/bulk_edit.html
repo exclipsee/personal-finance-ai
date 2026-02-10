@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Bulk Edit Transactions</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f4f4f4; }
+    input.category { width: 100%; }
+    button { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Bulk Edit Transactions</h2>
+  <div id="status"></div>
+  <table id="tx-table">
+    <thead><tr><th>ID</th><th>Date</th><th>Description</th><th>Amount</th><th>Category</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button id="save">Save changes</button>
+
+<script>
+async function load() {
+  const res = await fetch('/api/transactions');
+  const data = await res.json();
+  const tbody = document.querySelector('#tx-table tbody');
+  tbody.innerHTML = '';
+  data.forEach(tx => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${tx.id}</td>
+      <td>${tx.date}</td>
+      <td>${tx.description}</td>
+      <td>${tx.amount}</td>
+      <td><input class="category" data-id="${tx.id}" value="${tx.category || ''}"/></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function save() {
+  const inputs = Array.from(document.querySelectorAll('input.category'));
+  const updates = inputs.map(i => ({ id: i.dataset.id, category: i.value }));
+  const res = await fetch('/api/apply_bulk', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ updates })
+  });
+  const j = await res.json();
+  document.getElementById('status').innerText = `Applied ${j.applied} / ${j.requested}`;
+}
+
+document.getElementById('save').addEventListener('click', save);
+load();
+</script>
+</body>
+</html>
