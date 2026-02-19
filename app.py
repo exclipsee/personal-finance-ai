@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect
 import os
 import sqlite3
 import tempfile
@@ -12,6 +12,12 @@ import excel
 
 DB_PATH = os.environ.get('LITE_DB', 'lite.db')
 app = Flask(__name__)
+
+
+# Root route redirects to UI
+@app.route('/')
+def index():
+    return redirect('/ui')
 
 
 @app.route('/init', methods=['POST'])

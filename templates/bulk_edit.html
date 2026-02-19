@@ -2,23 +2,142 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Bulk Edit Transactions</title>
+  <title>Personal Finance Manager</title>
   <style>
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #f4f4f4; }
-    input.category { width: 100%; }
-    button { margin-top: 8px; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header h1 { margin: 0 0 10px 0; font-size: 28px; }
+    .header p { margin: 0; opacity: 0.9; }
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    .status {
+      padding: 12px 20px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+      display: block;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    th, td {
+      border: 1px solid #e1e8ed;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+      position: sticky;
+      top: 0;
+    }
+    tbody tr:hover { background: #f8f9ff; }
+    input.category {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #d1d9e0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input.category:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    button {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover { background: #5568d3; }
+    button:active { transform: translateY(1px); }
+    .amount-positive { color: #28a745; font-weight: 500; }
+    .amount-negative { color: #dc3545; font-weight: 500; }
+    .stats {
+      display: flex;
+      gap: 15px;
+      margin-left: auto;
+      font-size: 14px;
+      color: #6c757d;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stat-label { font-size: 12px; text-transform: uppercase; }
+    .stat-value { font-weight: 600; font-size: 18px; color: #495057; }
   </style>
 </head>
 <body>
-  <h2>Bulk Edit Transactions</h2>
-  <div id="status"></div>
+  <div class="header">
+    <h1>💰 Personal Finance Manager</h1>
+    <p>Manage and categorize your transactions</p>
+  </div>
+  <div id="status" class="status"></div>
+  <div class="controls">
+    <button id="save">💾 Save Changes</button>
+    <button id="refresh" style="background: #6c757d;">🔄 Refresh</button>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-label">Total</span>
+        <span class="stat-value" id="total-count">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Categorized</span>
+        <span class="stat-value" id="categorized-count">0</span>
+      </div>
+    </div>
+  </div>
   <table id="tx-table">
     <thead><tr><th>ID</th><th>Date</th><th>Description</th><th>Amount</th><th>Category</th></tr></thead>
     <tbody></tbody>
   </table>
-  <button id="save">Save changes</button>
 
 <script>
 async function load() {
@@ -26,31 +145,68 @@ async function load() {
   const data = await res.json();
   const tbody = document.querySelector('#tx-table tbody');
   tbody.innerHTML = '';
+
+  let categorizedCount = 0;
+
   data.forEach(tx => {
     const tr = document.createElement('tr');
+    const amountClass = tx.amount >= 0 ? 'amount-positive' : 'amount-negative';
+    const amountDisplay = tx.amount >= 0 ? `+$${tx.amount.toFixed(2)}` : `-$${Math.abs(tx.amount).toFixed(2)}`;
+
+    if (tx.category && tx.category.trim()) {
+      categorizedCount++;
+    }
+
     tr.innerHTML = `
       <td>${tx.id}</td>
       <td>${tx.date}</td>
       <td>${tx.description}</td>
-      <td>${tx.amount}</td>
-      <td><input class="category" data-id="${tx.id}" value="${tx.category || ''}"/></td>
+      <td class="${amountClass}">${amountDisplay}</td>
+      <td><input class="category" data-id="${tx.id}" value="${tx.category || ''}" placeholder="Enter category..."/></td>
     `;
     tbody.appendChild(tr);
   });
+
+  // Update stats
+  document.getElementById('total-count').textContent = data.length;
+  document.getElementById('categorized-count').textContent = categorizedCount;
+
+  showStatus(`Loaded ${data.length} transactions`, 'info');
 }
 
 async function save() {
   const inputs = Array.from(document.querySelectorAll('input.category'));
   const updates = inputs.map(i => ({ id: i.dataset.id, category: i.value }));
+
+  showStatus('Saving changes...', 'info');
+
   const res = await fetch('/api/apply_bulk', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ updates })
   });
   const j = await res.json();
-  document.getElementById('status').innerText = `Applied ${j.applied} / ${j.requested}`;
+
+  showStatus(`✅ Successfully saved ${j.applied} of ${j.requested} changes`, 'success');
+
+  // Refresh to update stats
+  setTimeout(() => load(), 1000);
+}
+
+function showStatus(message, type = 'info') {
+  const statusDiv = document.getElementById('status');
+  statusDiv.textContent = message;
+  statusDiv.className = `status ${type}`;
+
+  if (type === 'success') {
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
+  }
 }
 
 document.getElementById('save').addEventListener('click', save);
+document.getElementById('refresh').addEventListener('click', load);
 load();
 </script>
 </body>
