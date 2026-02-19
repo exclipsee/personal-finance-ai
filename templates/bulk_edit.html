@@ -112,6 +112,69 @@
     }
     .stat-label { font-size: 12px; text-transform: uppercase; }
     .stat-value { font-weight: 600; font-size: 18px; color: #495057; }
+    .upload-section {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .upload-section h3 {
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      color: #495057;
+    }
+    .upload-controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    .file-input-label {
+      padding: 12px 24px;
+      background: #28a745;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .file-input-label:hover {
+      background: #218838;
+    }
+    .file-name {
+      color: #6c757d;
+      font-size: 14px;
+    }
+    button.secondary {
+      background: #6c757d;
+    }
+    button.secondary:hover {
+      background: #5a6268;
+    }
+    button.categorize {
+      background: #fd7e14;
+    }
+    button.categorize:hover {
+      background: #e66a00;
+    }
+    .divider {
+      width: 1px;
+      height: 30px;
+      background: #dee2e6;
+      margin: 0 5px;
+    }
   </style>
 </head>
 <body>
@@ -120,9 +183,25 @@
     <p>Manage and categorize your transactions</p>
   </div>
   <div id="status" class="status"></div>
+
+  <div class="upload-section">
+    <h3>📁 Import Transactions</h3>
+    <div class="upload-controls">
+      <div class="file-input-wrapper">
+        <label class="file-input-label" for="file-input">📤 Choose CSV/Excel File</label>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" />
+      </div>
+      <span class="file-name" id="file-name">No file selected</span>
+      <button id="upload-btn" style="display: none;">⬆️ Upload & Import</button>
+      <div class="divider"></div>
+      <button id="categorize-btn" class="categorize">🤖 Auto-Categorize All</button>
+      <button id="export-btn" class="secondary">📥 Export to Excel</button>
+    </div>
+  </div>
+
   <div class="controls">
     <button id="save">💾 Save Changes</button>
-    <button id="refresh" style="background: #6c757d;">🔄 Refresh</button>
+    <button id="refresh" class="secondary">🔄 Refresh</button>
     <div class="stats">
       <div class="stat-item">
         <span class="stat-label">Total</span>
@@ -205,6 +284,98 @@ function showStatus(message, type = 'info') {
   }
 }
 
+async function uploadFile() {
+  const fileInput = document.getElementById('file-input');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    showStatus('Please select a file first', 'info');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  showStatus(`Uploading ${file.name}...`, 'info');
+
+  try {
+    const endpoint = file.name.endsWith('.csv') ? '/import' : '/sync/upload';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      if (data.imported !== undefined) {
+        showStatus(`✅ Successfully imported ${data.imported} transactions`, 'success');
+      } else if (data.merged !== undefined) {
+        showStatus(`✅ Successfully merged ${data.merged} transactions (${data.new_count} new, ${data.updated_count} updated)`, 'success');
+      }
+
+      // Clear file input
+      fileInput.value = '';
+      document.getElementById('file-name').textContent = 'No file selected';
+      document.getElementById('upload-btn').style.display = 'none';
+
+      // Reload transactions
+      setTimeout(() => load(), 1000);
+    } else {
+      showStatus(`❌ Error: ${data.error || 'Upload failed'}`, 'info');
+    }
+  } catch (err) {
+    showStatus(`❌ Upload failed: ${err.message}`, 'info');
+  }
+}
+
+async function categorizeAll() {
+  showStatus('Running auto-categorization...', 'info');
+
+  try {
+    const res = await fetch('/categorize', {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showStatus(`✅ Auto-categorized ${data.updated} transactions`, 'success');
+      setTimeout(() => load(), 1000);
+    } else {
+      showStatus('❌ Categorization failed', 'info');
+    }
+  } catch (err) {
+    showStatus(`❌ Error: ${err.message}`, 'info');
+  }
+}
+
+async function exportToExcel() {
+  showStatus('Generating Excel file...', 'info');
+
+  try {
+    window.location.href = '/sync/pull?format=xlsx';
+    showStatus('✅ Excel file downloaded', 'success');
+  } catch (err) {
+    showStatus(`❌ Export failed: ${err.message}`, 'info');
+  }
+}
+
+// File input change handler
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('upload-btn').style.display = 'inline-block';
+  } else {
+    document.getElementById('file-name').textContent = 'No file selected';
+    document.getElementById('upload-btn').style.display = 'none';
+  }
+});
+
+document.getElementById('upload-btn').addEventListener('click', uploadFile);
+document.getElementById('categorize-btn').addEventListener('click', categorizeAll);
+document.getElementById('export-btn').addEventListener('click', exportToExcel);
 document.getElementById('save').addEventListener('click', save);
 document.getElementById('refresh').addEventListener('click', load);
 load();
