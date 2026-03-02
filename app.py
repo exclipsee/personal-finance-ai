@@ -114,5 +114,12 @@ def api_apply_bulk():
     return jsonify({'applied': applied, 'requested': len(updates)})
 
 
+@app.route('/balance', methods=['GET'])
+def balance_route():
+    """Return the current balance (sum of all amounts) as JSON."""
+    bal = db.get_balance(db_path=DB_PATH)
+    return jsonify({'balance': bal})
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=5000)

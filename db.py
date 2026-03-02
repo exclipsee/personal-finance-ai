@@ -116,3 +116,17 @@ def fetch_uncategorized(db_path: str = 'lite.db') -> List[Tuple]:
     rows = c.fetchall()
     conn.close()
     return rows
+
+
+def get_balance(db_path: str = 'lite.db') -> float:
+    """Return the sum of all transaction amounts as a float. Returns 0.0 for empty DB."""
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    try:
+        c.execute('SELECT COALESCE(SUM(amount), 0) FROM transactions')
+        r = c.fetchone()
+        total = float(r[0]) if r and r[0] is not None else 0.0
+    except Exception:
+        total = 0.0
+    conn.close()
+    return total
