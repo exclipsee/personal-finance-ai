@@ -58,19 +58,3 @@ This repository aims to be minimal and easy to use locally. It includes a tiny F
    ```
 
    Open the UI at: http://127.0.0.1:5000/ui
-
-## API Endpoints
-
-- `GET /transactions` — list recent transactions (JSON)
-- `GET /api/transactions` — list all transactions (JSON, includes `external_id`)
-- `POST /import` — upload a CSV file to import transactions (multipart form, field `file`)
-- `POST /categorize` — run automatic categorization on uncategorized transactions
-- `GET /sync/pull` — export transactions as JSON (or `?format=xlsx` to download an XLSX)
-- `POST /sync/upload` — upload an XLSX exported from `sync/pull` to merge edits back (multipart form, field `file`)
-- `POST /api/apply_bulk` — apply a JSON set of category updates (body `{"updates": [{"id": 1, "category": "Groceries"}, ...]}`)
-- `GET /balance` — returns JSON `{ "balance": <float> }` where `balance` is the sum of all `amount` values in the DB
-
-## Command-line utilities / scripts
-
-- `scripts/apply_categories.py <file.xlsx>` — apply category edits from an XLSX file back to the DB
-- `scripts/create_templates.py` and `scripts/export.py` — small helpers for templating/exporting (see file headers)
