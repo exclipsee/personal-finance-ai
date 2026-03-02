@@ -74,7 +74,3 @@ This repository aims to be minimal and easy to use locally. It includes a tiny F
 
 - `scripts/apply_categories.py <file.xlsx>` — apply category edits from an XLSX file back to the DB
 - `scripts/create_templates.py` and `scripts/export.py` — small helpers for templating/exporting (see file headers)
-
-## Contributing
-
-Contributions and suggestions welcome. Open an issue or submit a pull request. For larger changes, please open an issue first so we can discuss the design.
