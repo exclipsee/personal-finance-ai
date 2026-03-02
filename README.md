@@ -75,29 +75,6 @@ This repository aims to be minimal and easy to use locally. It includes a tiny F
 - `scripts/apply_categories.py <file.xlsx>` — apply category edits from an XLSX file back to the DB
 - `scripts/create_templates.py` and `scripts/export.py` — small helpers for templating/exporting (see file headers)
 
-## Testing
-
-Run the test suite with pytest. Tests create temporary DB files so they don't affect your `lite.db`.
-
-```bash
-python3 -m pip install pytest
-pytest -q
-```
-
-If you add tests, follow the existing style: keep DB usage isolated to temp files and call `db.init_db(path)` before inserting rows.
-
-## Development notes
-
-- The DB is a small SQLite file named `lite.db` by default; you can override it with the `LITE_DB` environment variable when running the app:
-
-  ```bash
-  LITE_DB=mydb.db python app.py
-  ```
-
-- Categorization rules live in `categorizer.py` as simple keyword lists; adjust or extend them for your needs.
-
-- Excel import/export uses `pandas` + `openpyxl`.
-
 ## Contributing
 
 Contributions and suggestions welcome. Open an issue or submit a pull request. For larger changes, please open an issue first so we can discuss the design.
